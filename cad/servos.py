@@ -1,4 +1,4 @@
-"""The small bus servos the leader arm is built from: ROBOTIS DYNAMIXEL X330 family (XL330-M288-T bought for
+"""The small bus servos the leader arm is built from: ROBOTIS DYNAMIXEL X330 family (XL330-M288-T planned, not ordered; seven needed for
 this; the XC330-M288-T ordered for the arm's five-finger hand is the same case).
 
 Case frame: the horn axis is +Z at the origin, the horn face at z = 0, the body extends -Z and along -Y (the

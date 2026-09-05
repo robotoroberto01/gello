@@ -1,21 +1,21 @@
 # Gello
 
-A GELLO-style leader arm for the RobotDoctor arm: its kinematics at half scale, a DYNAMIXEL XL330 in every joint
-as an encoder, a trigger in the grip. Move the small arm and the big one follows, joint for joint.
+A passive seven-encoder leader prototype for RobotDoctor with a raised desk base, connected grip and moving finger trigger. The arm links retain half-scale nominal geometry; the actual follower integration remains to be built.
 
-Design brief: `docs/design-2026-09-05.md`. Parts: `docs/bom.md`.
+[Design and validation](docs/design-2026-09-05.md) · [Parts and allocation](docs/bom.md) · [Stock review](docs/stock-review.md) · [Electrical review](docs/electronics.md)
 
-    uv sync
-    uv run python -m cad.gello                       # every printed part to out/ + the assembly at the home pose
-    uv run python -m cad.gello --q 0,90,-90,0,0,0,0  # any pose (degrees, the arm's joint conventions)
-    uv run python tools/render.py --scene out/gello.png out/assembly_printed.stl=#5c99a8 out/assembly_servo.stl=#2e3438 out/assembly_handle.stl=#c9a86a
-    uv run python tools/view.py                      # live in the OCP viewer (uv run python -m ocp_vscode --host 127.0.0.1 --port 3939 first)
-    uv run pytest
+![Current design](docs/design-review.png)
 
-    # with the node flashed (firmware/gello_node) and the servos on the bus:
-    uv run python -m gello.reader --calibrate        # capture the zero pose -> calibration.json
-    uv run python -m gello.reader                    # joint angles, live
-    uv run python -m gello.follow --sim              # the arm's simulator follows the leader (needs ~/Desktop/RobotDoctor)
+```sh
+uv sync
+uv run python -m cad.gello
+uv run python -m tools.materials
+uv run pytest
+# After node/interface commissioning and measured calibration:
+uv run python -m gello.reader
+uv run python -m gello.follow --dry
+```
 
-`cad/servos.py` holds the servo's dimensions (VERIFY with calipers on the first one), `cad/params.py` the arm's
-link lengths and the scale, `cad/gello.py` the links, the forward kinematics and the assembly.
+STL and STEP files go to `out/`. Each of the eight named parts prints once. Geometry is checked against nominal servo envelopes and representative poses; actual horn, case and rear supports need a physical fit check. All seven XL330s remain unpurchased according to the recorded inventory.
+
+The sketch remains torque-off. `t` requests torque-off; parking is unavailable. `z` directs calibration to the host. `gello.follow --sim` prints forward kinematics through RobotDoctor; it does not drive MuJoCo or a physical arm. The native firmware test uses a fake UART under sanitizers, not an ESP32 board build.

@@ -27,5 +27,6 @@ RANGES = {"j1": (-160, 160), "j2": (-8, 178), "j3": (-160, 160), "j4": (-180, 18
 LINK_W = 24.0                       # link bar width (fits the servo's 20 mm case with 2 mm walls)
 LINK_T = 12.0                       # link bar thickness
 WALL = 2.0
+BASE_RISER = 100.0                  # raises the default grip clear of a full desktop
 BASE_D = 120.0                      # base disc, clamps or screws to the desk
 COUNTERBALANCE = True               # a rubber band from the base post to the upper arm: the servos hold nothing when idle

@@ -1,33 +1,19 @@
-# Bill of materials (5 September 2026)
+# Gello parts and allocation — 5 September 2026
 
-## Buy (~$250)
+Source: Fable bridge reply 001 and RobotDoctor's recorded orders. No purchasing occurred. [Stock review](stock-review.md) separates order records from available material.
 
-| item | qty | ~$ | source |
-|---|---|---|---|
-| DYNAMIXEL XL330-M288-T | 7 | 192 | robotis.us (the XC330 at $100 is the same case; not needed for a leader) |
-| ROBOTIS X3P cable pack, 180 mm x 10 | 1 | 10 | robotis.us; ships with the servos |
-| ESP32-S3-DevKitC-1-N16R8 | 1 | 10 | Amazon (the 09-04 3-pack has no spare) |
-| M2 x 6 and M2 x 8 screws + nuts (the servos ship with a few) | 40 | 6 | or the M2 x 6 pack in the arm's McMaster cart |
-| M3 x 8 + nylocs, idler pivots | 3 | | Glarks kit |
-| rubber bands, a small spring for the trigger | | | household |
-| USB-C cable, 2 m | 1 | | in hand |
+| Item | Qty | Current status |
+|---|---:|---|
+| XL330-M288-T | 7 | No order recorded; six joints plus trigger. Six ordered XC330s remain committed to the hand |
+| Dedicated X3P cable set | Route-dependent | A second cable allocation is needed. Measure connector-to-connector routes with service loops; a 180 mm cable must not be assumed to span a 200 mm forearm |
+| ESP32-S3 board | 1 | Fourth board needed if all three incoming boards remain assigned to the three hand nodes |
+| SN74AHCT125 | 1 | Ten ordered; reserve one only after delivery and allocation check |
+| RX level-shifting components, decoupling and prototyping board | Circuit-dependent | Missing from old BOM; final schematic and exact parts unresolved |
+| USB data cable and qualified encoder power | 1 set | Existing cable/port may suffice only after current-path, voltage and backfeed checks |
+| Servo horn/case and rear support hardware | Drawing-dependent | Fit actual ROBOTIS hardware before buying the old generic M2/M3 quantities |
+| Base screws or clamps | 4 screws or suitable clamps | Reuse workshop stock if available; model has four 5 mm through holes |
+| Counterbalance parts | Undesigned | Modeled peg is not a completed mechanism; no powered parking mode |
 
-## Have
+Each of base, shoulder, upper_arm, forearm, wrist, tool, handle and trigger_lever prints once. Use existing PLA for fit coupons; PETG is the prototype material. No CF filament, new metal stock or new carbon tube is allocated to Gello.
 
-| item | from |
-|---|---|
-| 74AHCT125 x 10 | DigiKey order 09-04 |
-| PETG (or PLA) ~150 g | the arm's spools |
-| 5 V from USB | |
-
-## Printed (`uv run python -m cad.gello`)
-
-| part | mass (PETG, 40 %) |
-|---|---|
-| base | 44 g |
-| shoulder | 12 g |
-| upper arm | 24 g |
-| forearm | 24 g |
-| wrist | 5 g |
-| tool | 7 g |
-| handle + trigger lever | 29 g |
+[Generated material allowance](material-plan.md): **0.551 kg PETG**, based on full-solid equivalent plus 20%. The previous 150 g figure multiplied volume by infill and did not include the raised pedestal or account for solid walls. Slice all eight parts and supports before subtracting measured stock. This is an allowance, not an order quantity.

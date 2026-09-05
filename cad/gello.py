@@ -17,10 +17,12 @@ horn axis +Z, horn face at z = 0, the case behind it (-Z) and along -Y.
 from __future__ import annotations
 
 import math
+from functools import lru_cache
+from itertools import combinations
 import sys
 
 import numpy as np
-from build123d import Align, Box, Compound, Cylinder, Location, Part, Plane, Pos, Vector
+from build123d import Align, Box, Compound, Cylinder, Location, Part, Plane, Pos, Vector, Rot
 
 from cad import params as P
 from cad.lib import OUT, save
@@ -31,7 +33,7 @@ M2_CLEAR = 2.4
 EAR_T = 4.0                         # the ears riding on horn and idler
 FIT = 0.4                           # pocket clearance round a servo case
 BASE_T = 6.0
-Z1 = BASE_T + 8.0 + S.d             # J1 servo horn face above the desk: the case lies flat on an 8 mm cradle floor
+Z1 = BASE_T + 8.0 + S.d + P.BASE_RISER             # J1 servo horn face above the desk: the case lies flat on an 8 mm cradle floor
 W5 = P.ARM["W5_Z"] * P.SCALE        # J4 horn face -> J5 axis (27.5)
 J4_BACK = 30.0                      # J4 servo horn face sits this far up the forearm from the wrist centre's frame
 # a pitch joint's cradle protrudes 8.4 mm past the axis (horn end) and 12.4 mm sideways; that corner sweeps a 15 mm
@@ -104,7 +106,7 @@ def _tz(d):
 def fk(q_deg) -> list[np.ndarray]:
     """Frames [J1, J2, J3, J4, J5, J6, tip] in world for joint angles in degrees (the arm's conventions)."""
     q = [math.radians(v) for v in q_deg[:6]]
-    T1 = _tz(Z1 + S.horn_h) @ _rz(q[0])
+    T1 = _tz(Z1) @ _rz(q[0])
     T2 = T1 @ _tz(P.J2_H) @ _rx(q[1])
     T3 = T2 @ _tz(-P.L_UPPER) @ _rx(q[2])
     T4 = T3 @ _tz(-(P.L_FORE - W5)) @ _rz(q[3])
@@ -137,18 +139,23 @@ IN_PITCH = frame((0, 0, 0), (1, 0, 0), (0, 1, 0))       # J2 and J5 as the upper
 IN_J3 = frame((0, 0, 0), (1, 0, 0), (0, 0, -1))          # J3 as the forearm sees it (the servo's case runs up the upper arm)
 
 
+@lru_cache(maxsize=None)
 def base() -> Part:
     b = _cyl(P.BASE_D / 2, BASE_T)
     b += F_J1 * (Pos(0, 0, 0) * cradle(floor=0.0))
     b += Pos(0, (S.l - S.horn_off - S.horn_off) / 2, BASE_T) * Box(40, S.l + 6, Z1 - S.d - BASE_T - FIT, align=(Align.CENTER, Align.CENTER, Align.MIN))     # the cradle floor under the J1 case
+    # Hollow pedestal: 6 mm side walls, a base floor and a roof under the servo cradle.
+    if P.BASE_RISER > 8:
+        b -= Pos(0, (S.l - 2 * S.horn_off) / 2, BASE_T - 1) * Box(28, S.l - 6, P.BASE_RISER + 3, align=(Align.CENTER, Align.CENTER, Align.MIN))
     for k in range(4):                                                        # desk screws / clamp slots
         a = math.radians(45 + 90 * k)
         b -= Pos(P.BASE_D / 2 * 0.8 * math.cos(a), P.BASE_D / 2 * 0.8 * math.sin(a), -1) * _cyl(2.5, BASE_T + 2)
     if P.COUNTERBALANCE:
         b += Pos(0, -45, BASE_T) * _cyl(4.0, 60.0)                            # the rubber band's post
-    return b
+    return b - F_J1 * servo_body(grow=FIT)
 
 
+@lru_cache(maxsize=None)
 def shoulder() -> Part:
     """Link 1: on J1's horn; carries the J2 servo at J2_H with its horn along +X."""
     plate = ear()                                                             # link 1's origin is J1's horn face, horn axis +Z
@@ -157,6 +164,7 @@ def shoulder() -> Part:
     return plate + bar + post + F_J2 * cradle()
 
 
+@lru_cache(maxsize=None)
 def upper_arm() -> Part:
     """Link 2: yoke on J2 (ears on horn +X and idler -X), bar down -Z to J3, whose servo it carries."""
     yoke = IN_PITCH * ear() + IN_PITCH * ear(on_idler=True)
@@ -170,6 +178,7 @@ def upper_arm() -> Part:
     return yoke + cross + bar + F_J3 * cradle()
 
 
+@lru_cache(maxsize=None)
 def forearm() -> Part:
     """Link 3: yoke on J3, bar down to the J4 servo, whose horn points down the link (the roll)."""
     yoke = IN_J3 * ear() + IN_J3 * ear(on_idler=True)
@@ -180,9 +189,11 @@ def forearm() -> Part:
         yoke += Pos(x, 0, z_top) * Box(EAR_T, P.LINK_W, -z_top - ARM_TOP, align=(Align.CENTER, Align.CENTER, Align.MIN))
     z_j4 = -(P.L_FORE - W5) + J4_BACK
     bar = Pos(0, 0, z_top - 8.0) * Box(P.LINK_W, P.LINK_T, (z_top - 8.0) - (z_j4 + S.w / 2 + FIT + P.WALL), align=(Align.CENTER, Align.CENTER, Align.MAX))
-    return yoke + cross + bar + F_J4 * cradle()
+    # The connecting bar must also respect the case pocket, including the idler.
+    return (yoke + cross + bar + F_J4 * cradle()) - F_J4 * servo_body(grow=FIT)
 
 
+@lru_cache(maxsize=None)
 def wrist() -> Part:
     """Link 4: a plate on J4's horn, dropping J4_BACK to the wrist centre where it carries the J5 servo (horn +X)."""
     # link 4's origin is the J4 axis point (L_FORE - W5 down the forearm); J4's horn face is J4_BACK above it, facing down
@@ -192,6 +203,7 @@ def wrist() -> Part:
     return plate + post + F_J5 * cradle(floor=6.0)                          # the floor reaches up to meet the post
 
 
+@lru_cache(maxsize=None)
 def tool() -> Part:
     """Link 5: yoke on J5 (ears +X horn, -X idler), carrying the J6 servo with its horn down the tool axis."""
     yoke = IN_J3 * ear() + IN_J3 * ear(on_idler=True)
@@ -203,30 +215,48 @@ def tool() -> Part:
     return yoke + cross + F_J6 * ear()                                        # the J6 horn plate, under the crossbar
 
 
+@lru_cache(maxsize=None)
+def trigger_lever(angle_deg=0.0) -> Part:
+    """Lever runs down the grip; a 40-degree pull is represented in the assembly."""
+    lever = ear() + Pos(0, 0, S.horn_h) * Box(6, 40, EAR_T, align=(Align.CENTER, Align.MAX, Align.MIN))
+    return F_TRIG * Rot(0, 0, -angle_deg) * lever
+
+
+@lru_cache(maxsize=None)
 def handle() -> tuple[Part, Part]:
-    """Link 6: the grip, carrying the J6 servo's case (horn up into the tool link), and the trigger lever."""
+    """One connected grip and J6 cradle, with the trigger's swept volume cleared."""
     grip = Pos(0, 0, GRIP_TOP) * Cylinder(14.0, P.HANDLE_L, align=(Align.CENTER, Align.CENTER, Align.MAX))
     h = F_J6 * cradle() + grip
+    # Two cheeks bridge the old 0.5 mm air gap, outside the J6 case envelope.
+    for x in (-S.w / 2 - FIT - P.WALL / 2, S.w / 2 + FIT + P.WALL / 2):
+        h += Pos(x, 0, GRIP_TOP - 2) * Box(P.WALL, 12, 8, align=(Align.CENTER, Align.CENTER, Align.MIN))
     h += F_TRIG * cradle()
     h -= F_TRIG * servo_body(grow=FIT)
-    lever = F_TRIG * (Pos(0, 0, S.horn_h) * ear() + Pos(0, 0, S.horn_h) * Box(6, 40, EAR_T, align=(Align.CENTER, Align.MIN, Align.MIN)))
-    return h, lever
+    h -= F_J6 * servo_body(grow=FIT)
+    # A finger lever on the outboard side must clear the whole pull, not only release.
+    for angle in range(0, int(P.TRIGGER_TRAVEL_DEG) + 1, 2):
+        h -= trigger_lever(angle)
+    return h, trigger_lever()
 
 
-def overlaps(G) -> list[str]:
-    printed = {s.label: s for s in G["printed"]}
-    chain = ["base", "shoulder", "upper arm", "forearm", "wrist", "tool"]
-    return [f"{a} x {b}: {(printed[a] & printed[b]).volume:.0f} mm^3" for a, b in zip(chain, chain[1:]) if (printed[a] & printed[b]).volume > 1.0]
+def overlaps(G, include_desk=True) -> list[str]:
+    shapes = [s for name, group in G.items() for s in group if include_desk or name != "desk"]
+    bad = []
+    for a, b in combinations(shapes, 2):
+        v = (a & b).volume
+        if v > 1.0:
+            bad.append(f"{a.label} x {b.label}: {v:.1f} mm^3")
+    return bad
 
 
 def fold_limit(joint: int, step: float = 5.0, base=(0, 90, 0, 0, 0, 0, 0)) -> tuple[float, float]:
-    """(negative, positive) travel from `base` at which the driven link first meets the carrying link."""
+    """Sampled internal collision limit; excludes the desk, not a hardware joint limit."""
     out = []
     for sgn in (-1, 1):
         q = list(base); a = 0.0
         while abs(a) < 180:
             a += sgn * step; q[joint] = base[joint] + a
-            if overlaps(assembly(q)[0]):
+            if overlaps(assembly(q)[0], include_desk=False):
                 break
         out.append(a - sgn * step)
     return out[0], out[1]
@@ -248,18 +278,25 @@ def assembly(q=HOME):
     L4 = loc(T[3]); add("printed", L4 * wrist(), "wrist"); add("servo", L4 * F_J5 * servo_body(), "J5 servo")
     L5 = loc(T[4]); add("printed", L5 * tool(), "tool")
     L6 = loc(T[5]); h, lever = handle(); add("servo", L6 * F_J6 * servo_body(), "J6 servo")
-    add("handle", L6 * h, "handle"); add("handle", L6 * lever, "trigger lever"); add("servo", L6 * F_TRIG * servo_body(), "trigger servo")
-    add("desk", Pos(0, 0, -5) * Box(500, 500, 10), "desk")
+    add("handle", L6 * h, "handle"); add("handle", L6 * trigger_lever(q[6]), "trigger lever"); add("servo", L6 * F_TRIG * servo_body(), "trigger servo")
+    add("desk", Pos(0, 0, -5) * Box(1200, 1000, 10), "desk")
     return G, T
+
+
+def printed_parts():
+    parts = {n: (fn(), "PETG", 0.4, 1) for n, fn in LINKS.items()}
+    h, lever = handle()
+    parts.update(handle=(h, "PETG", 0.4, 1), trigger_lever=(lever, "PETG", 0.4, 1))
+    return parts
 
 
 def main(argv):
     q = tuple(float(v) for v in argv[argv.index("--q") + 1].split(",")) if "--q" in argv else HOME
     OUT.mkdir(exist_ok=True)
-    for name, fn in LINKS.items():
-        save(fn(), name, "PETG", 0.4)
-    h, lever = handle()
-    save(h, "handle", "PETG", 0.4); save(lever, "trigger_lever", "PETG", 0.4)
+    for name, (p, mat, fill, qty) in printed_parts().items():
+        if not p.is_valid or len(p.solids()) != 1:
+            raise ValueError(f"{name}: export needs one valid connected solid")
+        save(p, name, mat, fill)
     G, T = assembly(q)
     tip = T[6][:3, 3]
     print(f"pose {q}: tip at ({tip[0]:.0f}, {tip[1]:.0f}, {tip[2]:.0f}) mm; reach J2 -> wrist {P.L_UPPER + P.L_FORE:.0f} mm")

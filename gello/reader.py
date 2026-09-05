@@ -50,7 +50,9 @@ class Leader:
         return self.cal.to_degrees(s.counts)
 
     def hold(self, on: bool) -> None:
-        self.ser.write(b"t")
+        if on:
+            raise RuntimeError("Parking torque is unavailable: this leader is a passive encoder")
+        self.ser.write(b"t")  # the passive node interprets this as an explicit torque-off request
 
 
 def calibrate(port: str | None) -> Calibration:

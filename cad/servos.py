@@ -1,5 +1,7 @@
-"""The small bus servos the leader arm is built from: ROBOTIS DYNAMIXEL X330 family (XL330-M288-T bought for
-this; the XC330-M288-T ordered for the arm's five-finger hand is the same case).
+"""The small bus servos the leader arm is built from: ROBOTIS DYNAMIXEL X330 family.  No XL330 is ordered yet:
+Gello needs 7 x XL330-M288-T (six joints + the trigger), to buy from robotis.us ($27.49 each), plus its own X3P
+180 mm cable pack (the hand's 10-pack has four left after its six servos).  The XC330-M288-T ordered for the arm's
+five-finger hand is the same case; do not borrow those.
 
 Case frame: the horn axis is +Z at the origin, the horn face at z = 0, the body extends -Z and along -Y (the
 long side).  Numbers from the ROBOTIS e-manual drawing of the XL330-M288-T; VERIFY every one with calipers on the

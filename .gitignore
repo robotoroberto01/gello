@@ -1,0 +1,13 @@
+.venv/
+out/
+__pycache__/
+*.pyc
+.DS_Store
+docs/cad-ref/*.stp
+sim/meshes/*.stl
+sim/arm.xml
+MUJOCO_LOG.TXT
+sim/scene.xml
+sim/meshes_covers/
+sim/meshes_swap/
+sim/arm_powerloss.xml

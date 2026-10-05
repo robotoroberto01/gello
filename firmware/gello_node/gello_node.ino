@@ -5,7 +5,8 @@
 //   p = raw 12-bit position (0..4095 = 360 deg), 65535 when that servo did not answer; ok_mask bit i = servo i replied
 //
 // Wiring (docs/electronics.md): UART1 TX -> 74AHCT125 gate A (enabled by DIR), UART1 RX <- gate B (enabled by !DIR),
-// both to the servos' DATA line; 5 V from a USB-powered buck or the Pololu D36V50F5; all grounds common.
+// both to the servos' DATA line; 5 V is USB: the Mac's USB-C into the DevKitC-1, its 5V pin to the bus (under 1 A
+// in total, and the board's VBUS diode leaves ~4.7 V, inside the X330's 3.7-6 V); no regulator; all grounds common.
 // Torque is OFF on every servo: this arm is moved by hand.  Sending 'z' zeroes the reported offsets (kept in NVS);
 // sending 't' toggles a light holding torque for parking.
 #include <Arduino.h>
